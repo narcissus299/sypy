@@ -34,7 +34,7 @@ SyPy supports many [random graph](http://en.wikipedia.org/wiki/Random_graph) mod
         graph=sypy.SmallWorldGraph(
             num_nodes=5000,
             node_degree=100,
-            rewiring_prob=0.8
+            rewire_prob=0.8
         ),
         name="HonestSmallWorldGraph"
     )
@@ -58,11 +58,11 @@ After the network is updated, we can run any of the supported [graph-based Sybil
     detector = sypy.SybilGuardDetector(social_network)
     results = detector.detect()
 
-    print "accuracy={0:.2f}, sensitivity={1:.2f}, specificity={2:.2f}".format(
+    print("accuracy={0:.2f}, sensitivity={1:.2f}, specificity={2:.2f}".format(
         results.accuracy(),
         results.sensitivity(),
         results.specificity()
-    )
+    )) 
 
 # How extensible is it?
 
