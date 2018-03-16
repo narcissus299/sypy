@@ -17,6 +17,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import networkx as nx
+import numpy as np
 import operator
 import random
 import math
@@ -307,7 +308,7 @@ class SybilRankDetector(BaseSybilDetector):
 
     def __propagate_network_trust(self, network_trust):
         updated_trust = {}
-        for node, trust in network_trust.iteritems():
+        for node, trust in network_trust.items():
             new_trust = 0.0
             neighbors = self.network.graph.structure.neighbors(node)
 
@@ -320,17 +321,104 @@ class SybilRankDetector(BaseSybilDetector):
         return updated_trust
 
     def __normalize_and_rank_network_trust(self, network_trust):
-        for node, trust in network_trust.iteritems():
+        for node, trust in network_trust.items():
             node_degree = self.network.graph.structure.degree(node)
             network_trust[node] = trust / (float)(node_degree)
 
         ranked_trust = sorted(
-            network_trust.iteritems(),
+            network_trust.items(),
             key=operator.itemgetter(1)
         )
 
         return ranked_trust
 
+#TODO ADD: weights
+class SybilTrustDetector(BaseSybilDetector):
+    
+    def __init__(self,network,verifiers=None, pivot=0.1, seed=None,num_iterations_scaler=3,activation_func='tanh'):
+        BaseSybilDetector.__init__(self, network, verifiers, seed)
+        self.num_iterations = num_iterations_scaler
+        self.pivot = pivot
+        self.activation = self.__activation_function(activation_func) #Choosing activation function
+
+    def detect(self):
+
+        network_trust = self.__initialize_graph()
+
+        while self.num_iterations != 0:
+            network_trust = self.__propagate_network_trust(network_trust)
+            self.num_iterations = self.num_iterations - 1
+
+        ranked_trust = self.__rank_network(network_trust)
+
+        #TODO figure out what pivot does
+        pivot_mark = (int)(self.pivot * len(ranked_trust))
+        verified_honests = [
+            honest_node for honest_node, trust in ranked_trust[pivot_mark:]
+        ]
+
+        self._vote_honests_predicted([verified_honests])
+        return sypy.Results(self)
+
+    def __initialize_graph(self):
+
+        #Set trust for each node
+        network_trust = dict(
+            (node, 0.0) for node in self.network.graph.nodes()
+        )
+
+        for verifier in self.verifiers:
+            network_trust[verifier] = 1.0
+
+        #Set weight for each node
+        for node in self.network.graph.nodes():
+            neighbors = self.network.graph.structure.neighbors(node)
+            for neighbor in neighbors:
+                self.network.graph.structure[node][neighbor]["weight"] = 1.0
+
+        return network_trust
+
+    def __activation_function(self,function):
+        
+        def tanh(n):
+            return np.tanh(n)
+
+        def arctan(n, normalize=True):
+            return np.arctan(n)/(np.pi/2) if normalize else np.arctan(n)
+
+        def sigmoid(n):
+            return 1/(1+np.exp(-n))
+
+        if function == 'tanh': 
+            return tanh
+        elif function == 'arctan':
+            return arctan
+        elif function == 'sigmoid':
+            return sigmoid
+
+    def __propagate_network_trust(self,network_trust):
+        updated_trust = {}
+
+        for node,trust in network_trust.items():
+            z = 0.0
+            neighbors = self.network.graph.structure.neighbors(node)
+            
+            for neighbor in neighbors:
+                w = self.network.graph.structure[node][neighbor]["weight"]
+                z += w*network_trust[neighbor]
+
+            updated_trust[node] = self.activation(z)
+
+        return updated_trust
+
+    def __rank_network(self,network_trust):
+
+        ranked_trust = sorted(
+            network_trust.items(),
+            key=operator.itemgetter(1)
+        )
+
+        return ranked_trust
 
 class SybilPredictDetector(BaseSybilDetector):
     """
@@ -430,7 +518,7 @@ class SybilPredictDetector(BaseSybilDetector):
 
     def __propagate_network_trust(self, network_trust):
         updated_trust = {}
-        for node, trust in network_trust.iteritems():
+        for node, trust in network_trust.items():
             new_trust = 0.0
             neighbors = self.network.graph.structure.neighbors(node)
 
@@ -448,12 +536,12 @@ class SybilPredictDetector(BaseSybilDetector):
         return updated_trust
 
     def __normalize_and_rank_network_trust(self, network_trust):
-        for node, trust in network_trust.iteritems():
+        for node, trust in network_trust.items():
             node_weight = self.network.graph.structure.degree(node, weight="weight")
             network_trust[node] = trust / (float)(node_weight)
 
         ranked_trust = sorted(
-            network_trust.iteritems(),
+            network_trust.items(),
             key=operator.itemgetter(1)
         )
 
@@ -559,7 +647,7 @@ class SybilGuardDetector(BaseSybilDetector):
 
     def __get_walk_edges(self, walk):
         edges = []
-        for index in xrange(len(walk)-1):
+        for index in range(len(walk)-1):
             edges.append(
                 (walk[index], walk[index+1])
             )
@@ -651,7 +739,7 @@ class SybilLimitDetector(BaseSybilDetector):
 
         for node in nodes:
             instance_tails = []
-            for instance_index in xrange(num_instances):
+            for instance_index in range(num_instances):
                 walk = [node]
 
                 ingress_node = node

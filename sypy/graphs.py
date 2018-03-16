@@ -245,107 +245,107 @@ class GirvanNewmanCommunityGraph(BaseGraph):
                             )
 
 
-class LFRCommunityGraph(BaseGraph):
-    """
-    Generates LFR-Benchmark random graph with overlapping community structure
-    as described in Benchmark Graphs for Testing Community Detection Algorithms,
-    Lancichinetti et al., Phys. Rev., Vol 78(4), 2008.
-    In this graph, the community sizes and community degrees are power-law,
-    unlike the classical Girvan-Newman graphs, where communities have similar
-    size and each community is an Erdos-Renyi random graph.
-    """
-    def __init__(self, num_comm=4, max_comm=100, comm_exp=1.5, max_degree=10,
-        degree_exp=1.5, mixing_par=0.075, tries=3, seed=None
-    ):
-        BaseGraph.__init__(self)
-        self.num_comm = num_comm
-        self.max_comm = max_comm
-        self.comm_exp = comm_exp
-        self.max_degree = max_degree
-        self.degree_exp = degree_exp
-        self.mixing_par = mixing_par
-        self.tries = tries
-        self.seed = seed
-        self.__update_structure()
+# class LFRCommunityGraph(BaseGraph):
+#     """
+#     Generates LFR-Benchmark random graph with overlapping community structure
+#     as described in Benchmark Graphs for Testing Community Detection Algorithms,
+#     Lancichinetti et al., Phys. Rev., Vol 78(4), 2008.
+#     In this graph, the community sizes and community degrees are power-law,
+#     unlike the classical Girvan-Newman graphs, where communities have similar
+#     size and each community is an Erdos-Renyi random graph.
+#     """
+#     def __init__(self, num_comm=4, max_comm=100, comm_exp=1.5, max_degree=10,
+#         degree_exp=1.5, mixing_par=0.075, tries=3, seed=None
+#     ):
+#         BaseGraph.__init__(self)
+#         self.num_comm = num_comm
+#         self.max_comm = max_comm
+#         self.comm_exp = comm_exp
+#         self.max_degree = max_degree
+#         self.degree_exp = degree_exp
+#         self.mixing_par = mixing_par
+#         self.tries = tries
+#         self.seed = seed
+#         self.__update_structure()
 
-    def __update_structure(self):
-        if self.seed:
-            random.seed(seed)
-            np.random.seed(seed)
+#     def __update_structure(self):
+#         if self.seed:
+#             random.seed(seed)
+#             np.random.seed(seed)
 
-        comm_sizes = self.__get_community_sizes()
-        self.structure.add_nodes_from(range(sum(comm_sizes)))
+#         comm_sizes = self.__get_community_sizes()
+#         self.structure.add_nodes_from(range(sum(comm_sizes)))
 
-        try:
-            self.__construct_communities(comm_sizes)
-            self.__connect_communities(comm_sizes)
+#         try:
+#             self.__construct_communities(comm_sizes)
+#             self.__connect_communities(comm_sizes)
 
-        except ValueError, error:
-            if self.tries != 0:
-                print "{0}, retrying".format(error)
-                self.tries -= 1
-                self.__update_structure()
-            else:
-                raise Exception("{0}. Change seed or inputs".format(error))
+#         except ValueError, error:
+#             if self.tries != 0:
+#                 print "{0}, retrying".format(error)
+#                 self.tries -= 1
+#                 self.__update_structure()
+#             else:
+#                 raise Exception("{0}. Change seed or inputs".format(error))
 
-    def __construct_communities(self, comm_sizes):
-        for i, comm_size in enumerate(comm_sizes):
-            comm_degrees = self.__get_community_degrees(comm_size)
-            comm_nodes = range(
-                sum(comm_sizes[:i]),
-                sum(comm_sizes[:i+1])
-            )
-            nx.set_node_attributes(
-                self.structure,
-                "community",
-                dict([node, i] for node in comm_nodes)
-            )
-            for j, node in enumerate(comm_nodes):
-                node_degree = np.ceil(
-                    comm_degrees[j] * (1 - self.mixing_par)
-                )
-                node_neighbors = random.sample(
-                    set(comm_nodes) - set([node]),
-                    int(node_degree)
-                )
-                node_edges = [(node, neighbor) for neighbor in node_neighbors]
-                self.structure.add_edges_from(node_edges)
+#     def __construct_communities(self, comm_sizes):
+#         for i, comm_size in enumerate(comm_sizes):
+#             comm_degrees = self.__get_community_degrees(comm_size)
+#             comm_nodes = range(
+#                 sum(comm_sizes[:i]),
+#                 sum(comm_sizes[:i+1])
+#             )
+#             nx.set_node_attributes(
+#                 self.structure,
+#                 "community",
+#                 dict([node, i] for node in comm_nodes)
+#             )
+#             for j, node in enumerate(comm_nodes):
+#                 node_degree = np.ceil(
+#                     comm_degrees[j] * (1 - self.mixing_par)
+#                 )
+#                 node_neighbors = random.sample(
+#                     set(comm_nodes) - set([node]),
+#                     int(node_degree)
+#                 )
+#                 node_edges = [(node, neighbor) for neighbor in node_neighbors]
+#                 self.structure.add_edges_from(node_edges)
 
-    def __connect_communities(self, comm_sizes):
-        for i, comm_size in enumerate(comm_sizes):
-            comm_nodes = range(
-                sum(comm_sizes[:i]),
-                sum(comm_sizes[:i+1])
-            )
-            other_nodes = list(
-                set(self.structure.nodes()) - set(comm_nodes)
-            )
-            for j, node in enumerate(comm_nodes):
-                node_degree = np.floor(
-                    self.structure.degree(node) *\
-                        (self.mixing_par/(1 - self.mixing_par))
-                )
-                node_neighbors = random.sample(
-                    other_nodes,
-                    int(node_degree)
-                )
-                node_edges = [(node, neighbor) for neighbor in node_neighbors]
-                self.structure.add_edges_from(node_edges)
+#     def __connect_communities(self, comm_sizes):
+#         for i, comm_size in enumerate(comm_sizes):
+#             comm_nodes = range(
+#                 sum(comm_sizes[:i]),
+#                 sum(comm_sizes[:i+1])
+#             )
+#             other_nodes = list(
+#                 set(self.structure.nodes()) - set(comm_nodes)
+#             )
+#             for j, node in enumerate(comm_nodes):
+#                 node_degree = np.floor(
+#                     self.structure.degree(node) *\
+#                         (self.mixing_par/(1 - self.mixing_par))
+#                 )
+#                 node_neighbors = random.sample(
+#                     other_nodes,
+#                     int(node_degree)
+#                 )
+#                 node_edges = [(node, neighbor) for neighbor in node_neighbors]
+#                 self.structure.add_edges_from(node_edges)
 
-    def __get_community_sizes(self):
-        rvs = powerlaw.rvs(
-            self.comm_exp,
-            size=self.num_comm
-        )
+#     def __get_community_sizes(self):
+#         rvs = powerlaw.rvs(
+#             self.comm_exp,
+#             size=self.num_comm
+#         )
 
-        comm_sizes = [int(size) for size in (rvs * self.max_comm)]
-        return comm_sizes
+#         comm_sizes = [int(size) for size in (rvs * self.max_comm)]
+#         return comm_sizes
 
-    def __get_community_degrees(self, comm_size):
-        rvs = powerlaw.rvs(
-            self.degree_exp,
-            size=comm_size
-        )
+#     def __get_community_degrees(self, comm_size):
+#         rvs = powerlaw.rvs(
+#             self.degree_exp,
+#             size=comm_size
+#         )
 
-        comm_degrees = [int(degree) for degree in (rvs * self.max_degree)]
-        return comm_degrees
+#         comm_degrees = [int(degree) for degree in (rvs * self.max_degree)]
+#         return comm_degrees
